@@ -5,6 +5,85 @@ from tkinter import filedialog
 from datetime import datetime as dt
 from threading import Thread
 import time
+from tkinter import *
+
+class OrderOfColors:
+    def __init__(self, master):
+        self.master = master
+        self.order_of_colors = Toplevel(master)
+        self.order_of_colors.title("Порядок наложения цветов")
+        self.order_of_colors.geometry('270x180+200+100')
+        self.order_of_colors.resizable(False, False)
+
+        # Добавьте необходимые виджеты для вашего всплывающего окна
+        self.box = Listbox(self.order_of_colors, selectmode=EXTENDED)
+        self.box.pack(side=LEFT)
+        scroll = Scrollbar(command=self.box.yview)
+        scroll.pack(side=LEFT, fill=Y)
+        self.box.config(yscrollcommand=scroll.set)
+
+        f = Frame(self.order_of_colors)
+        f.pack(side=LEFT, padx=10)
+        self.label =Label(f, text="название закза")
+        self.label.pack(anchor=N)
+        self.entry = Entry(f)
+        self.entry.pack(anchor=S, pady=5)
+        Button(f, text="Добавить", command=self.add_item).pack(fill=X)
+        Button(f, text="Удалить", command=self.del_list).pack(fill=X)
+        Button(f, text="Изменить", command=self.update_item).pack(fill=X)
+        Button(f, text="Сохранить", command=self.save_list).pack(fill=X)
+
+        # Переменная для отслеживания обновления
+        self.updated = False
+
+        # Загрузка данных из файла при запуске
+        self.load_list()
+
+    def add_item(self):
+        if self.updated:
+            # Если было обновление, вставляем в выбранное место
+            select = self.box.curselection()
+            if select:
+                index = select[0]
+                self.box.delete(index)
+                self.box.insert(index, self.entry.get())
+                self.entry.delete(0, END)
+                self.updated = False
+        else:
+            # В противном случае добавляем в конец
+            self.box.insert(END, self.entry.get())
+            self.entry.delete(0, END)
+
+    def del_list(self):
+        select = list(self.box.curselection())
+        select.reverse()
+        for i in select:
+            self.box.delete(i)
+        # Устанавливаем флаг обновления после удаления
+        self.updated = True
+
+    def save_list(self):
+        with open('list000.txt', 'w') as f:
+            f.writelines("\n".join(self.box.get(0, END)))
+
+    def load_list(self):
+        try:
+            with open('list000.txt', 'r') as f:
+                lines = f.read().splitlines()
+                self.box.delete(0, END)
+                for line in lines:
+                    self.box.insert(END, line)
+        except FileNotFoundError:
+            pass
+
+    def update_item(self):
+        select = self.box.curselection()
+        if select:
+            index = select[0]
+            selected_text = self.box.get(index)
+            self.entry.delete(0, END)
+            self.entry.insert(0, selected_text)
+            self.updated = True
 
 class JobEntryWindow:
     def __init__(self, parent):
@@ -53,8 +132,13 @@ class MenuBar:
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Файл", menu=file_menu)
 
+        format_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Форматы", menu=format_menu)
+
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Помощь", menu=help_menu)
+
+        
 
         file_menu.add_command(label="Открыть PDF", command=self.open_pdf)
         file_menu.add_command(label="Оформить новый заказ", command=self.new_job)
@@ -64,8 +148,16 @@ class MenuBar:
         file_menu.add_separator()
         file_menu.add_command(label="Выход", command=root.destroy)
 
+        format_menu.add_command(label="Форматы бумаги", command=self.dummy_command)
+        format_menu.add_command(label="Форматы бумаги советские", command=self.dummy_command)
+        format_menu.add_command(label="Рулонные материалы", command=self.dummy_command)
+        format_menu.add_command(label="Свои стандарты", command=self.dummy_command)
+        format_menu.add_separator()
+        format_menu.add_command(label="Часто используемые", command=self.dummy_command)
+
         help_menu.add_command(label="Инструкция пользователя", command=self.dummy_command)
         help_menu.add_command(label="Связь с разработчиками", command=self.dummy_command)
+        help_menu.add_separator()
         help_menu.add_command(label="Справка", command=self.dummy_command)
 
         
@@ -160,14 +252,27 @@ class ArcoladApp:
         self.flashing_text = FlashingText(self.root)
         self.menu_bar = MenuBar(self.root, self)
         self.db_handler = DatabaseHandler()
+        self.root.img_pdf = PhotoImage(file="pdf_icon.png")
         self.create_widgets()
+         # Устанавливаем размеры окна
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        self.root.geometry(f"{screen_width}x{screen_height}")
+        # Создаем рамку с шириной 5 пикселей
+        self.frame = tk.Frame(self.root, bd=15, relief=tk.SOLID)
+        self.frame.place(x=0, y=0, relwidth=1, relheight=1)
 
     def create_widgets(self):
         # Создание виджетов основного окна приложения
+        
         label_date = tk.Label(self.root, text="Дата:", font=("Arial", 13, "bold"))
         label_date.place(x=10, y=10)
-        self.entry_date = tk.Entry(self.root, width=9, font=("Arial", 12, "normal"))
+        self.entry_date = tk.Entry(self.root, width=10, font=("Arial", 12, "normal"))
         self.entry_date.place(x=60, y=10)
+        self.setup_validation(self.entry_date, 10)
+        # Insert the current date when creating the widget
+        self.insert_date()
+
         label_y = tk.Label(self.root, text="г.", font=("Arial", 13, "normal"))
         label_y.place(x=145, y=10)
         label_name = tk.Label(self.root, text="Название заказа:", font=("Arial", 13, "bold"))
@@ -186,14 +291,18 @@ class ArcoladApp:
         label_material.place(x=10, y=40)
         self.material = tk.Entry(self.root, width=30, font=("Arial", 12, "normal"))
         self.material.place(x=190, y=40)
+        
+
         #Формат и направление волокна на бумаге
         #Первая цифра указывает на Grain вдоль которой идет направление
-        self.paper_format_before_x = tk.Entry(self.root, width=4, font=("Arial", 12, "normal"))
+        self.paper_format_before_x = tk.Entry(self.root, width=4, font=("Arial", 13, "normal"))
         self.paper_format_before_x.place(x=756, y=40)
+        self.setup_validation(self.paper_format_before_x, 4)
         label_paper_format_x = tk.Label(self.root, text="X", font=("Arial", 13, "bold"))
         label_paper_format_x.place(x=797, y=40)
-        self.paper_format_after_x = tk.Entry(self.root, width=4, font=("Arial", 12, "normal"))
+        self.paper_format_after_x = tk.Entry(self.root, width=4, font=("Arial", 13, "normal"))
         self.paper_format_after_x.place(x=815, y=40)
+        self.setup_validation(self.paper_format_after_x, 4)
 
 
         label_count_cheets = tk.Label(self.root, text="Тираж(шт.):", font=("Arial", 13, "bold"))
@@ -207,45 +316,90 @@ class ArcoladApp:
         self.l_thickness.place(x=1140, y=40)
         self.thickness = tk.Entry(self.root, width=7, font=("Arial", 16, "bold"))
         self.thickness.place(x=1180, y=40)
+        self.setup_validation(self.thickness, 7)
 
         label_density = tk.Label(self.root, text="г/м²", font=("Arial", 13, "bold"))
         label_density.place(x=1160, y=80)
         self.density = tk.Entry(self.root, width=4, font=("Arial", 12, "normal"))
         self.density.place(x=1210, y=80)
+        self.setup_validation(self.density, 4)
 
         label_count_plates = tk.Label(self.root, text="Кол-во форм:", font=("Arial", 13, "bold"))
         label_count_plates.place(x=10, y=70)
         self.count_plates = tk.Entry(self.root, width=2, font=("Arial", 12, "normal"))
         self.count_plates.place(x=140, y=70)
-    
-    # Register validation functions for each widget
-        validate_cmd_density = self.root.register(lambda P: self.validate_entry(P, max_length=4))
-        self.density.config(validate="key", validatecommand=(validate_cmd_density, '%P'))
+        self.setup_validation(self.count_plates, 2)
 
+        label_plates_format = tk.Label(self.root, text="Размер печатной формы(мм):", font=("Arial", 13, "bold"))
+        label_plates_format.place(x=170, y=70)
+        self.plates_format_before_x = tk.Entry(self.root, width=4, font=("Arial", 13, "normal"))
+        self.plates_format_before_x.place(x=430, y=70)
+        self.setup_validation(self.plates_format_before_x, 4)
+        label_plates_format_x = tk.Label(self.root, text="X", font=("Arial", 13, "bold"))
+        label_plates_format_x.place(x=472, y=70)
+        self.plates_format_after_x = tk.Entry(self.root, width=4, font=("Arial", 13, "normal"))
+        self.plates_format_after_x.place(x=490, y=70)
+        self.setup_validation(self.plates_format_after_x, 4)
+
+        button_orders_of_colors = Button(self.root, text="Порядок наложения цветов", font=("Arial", 13, "bold"), command=self.open_popup)
+        button_orders_of_colors.place(x=535, y=70)
+
+        self.select_button = Button(self.root, image=self.root.img_pdf)
+        self.select_button.place(x=790, y=70)  
+
+        # Create canvas for displaying images
+        self.canvas_show_pdf = Canvas(self.root, width=1255, height=500, bg='green')
+        self.canvas_show_pdf.place(x=10, y=120)
+
+
+    def open_popup(self):
+        # Создайте экземпляр всплывающего окна
+        popup_window = OrderOfColors(self.root)
         
 
+        
+    
+    def setup_validation(self, widget, max_length, validate_func=None):
+        if validate_func is None:
+            validate_func = self.validate_entry  # Use default validation if none provided
+        validation_cmd = self.root.register(lambda P, max_length=max_length: validate_func(P, max_length))
+        widget.config(validate="key", validatecommand=(validation_cmd, '%P'))
+
+
     def validate_entry(self, new_text, max_length):
-        # Allow only up to max_length characters
-        return len(new_text) <= max_length
+        #print(f"Validating: {new_text}, Max Length: {max_length}")
+        result = len(new_text) <= max_length
+        #print(f"Validation result: {result}")
+        return result
 
+    def validate_date(self, new_text):
+        # Validate date format (dd.mm.yyyy)
+        return re.match(r'^\d{1,2}\.\d{1,2}\.\d{4}$', new_text) is not None
 
-    def save_job(self):
+    def save_paper_format(self):
         # Concatenate the values entered before and after 'X' and save to the database...
         before_x = self.paper_format_before_x.get()
         after_x = self.paper_format_after_x.get()
         paper_format = f"{before_x}X{after_x}"    
-
-        # Insert the current date when creating the widget
-        self.insert_date()
+    
+    def save_plates_format(self):
+        # Concatenate the values entered before and after 'X' and save to the database...
+        plates_before = self.plates_format_before_x.get()
+        plates_after = self.plates_format_after_x.get()
+        plates_format = f"{plates_before}X{plates_after}" 
+       
 
     def create_job_entry_window(self):
         job_entry_window = JobEntryWindow(self.root)
+
+     
 
     def insert_date(self):
         # Get the current date and insert it into the Entry
         current_date = dt.now().date()
         formatted_date = current_date.strftime('%d.%m.%Y')
         self.entry_date.insert(0, formatted_date)
+        self.entry_date.focus_set()  # Set focus on the date entry
         print(formatted_date)
 
     def run(self):
@@ -268,3 +422,6 @@ class ArcoladApp:
 if __name__ == '__main__':
     arcolad = ArcoladApp()
     arcolad.run()
+
+
+
