@@ -1,12 +1,13 @@
 import tkinter as tk
 import sqlite3
-from PIL import Image, ImageTk
+from PIL import Image
 from datetime import datetime as dt
 from threading import Thread
 import time
 from tkinter import *
 import fitz  # PyMuPDF
 from tkinter import Tk, Canvas, PhotoImage, filedialog
+from PIL import Image, ImageTk
 
 
 
@@ -321,7 +322,8 @@ class ArcoladApp:
 
         self.filepath_field.delete(1.0, END)
         self.filepath_field.insert(1.0, pdf_file_path)
-        self.show_pdf_on_canvas(pdf_file_path)
+        if pdf_file_path:
+            self.show_pdf_on_canvas(pdf_file_path)
 
     def show_pdf_on_canvas(self, pdf_file_path):
         doc = fitz.open(pdf_file_path)
@@ -339,9 +341,10 @@ class ArcoladApp:
             self.canvas_show_pdf.config(width=tk_image.width(), height=tk_image.height())
 
             # Display the image on the canvas
-            self.canvas_show_pdf.create_image(0, 0, anchor=tk.NW, image=tk_image)
-            self.canvas_show_pdf.image = tk_image
-            self.canvas_show_pdf = tk_image  # Keep a reference to prevent garbage collection   
+            canvas_image_item = self.canvas_show_pdf.create_image(0, 0, anchor=tk.NW, image=tk_image)
+            self.canvas_show_pdf.image = tk_image  # Keep a reference to prevent garbage collection
+
+   
 
       
 
@@ -396,6 +399,7 @@ class ArcoladApp:
 if __name__ == '__main__':
     arcolad = ArcoladApp()
     arcolad.run()
+
 
 
 
