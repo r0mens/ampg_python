@@ -7,11 +7,43 @@ import time
 from tkinter import *
 import fitz  # PyMuPDF
 from tkinter import Tk, Canvas, PhotoImage, filedialog
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
+from tkinter import ttk
 
 
 
+class Gradient:
+    def __init__(self, width=250, height=30, start_color=(255, 0, 0), end_color=(255, 255, 255)):
+        self.width = width
+        self.height = height
+        self.start_color = start_color
+        self.end_color = end_color
+        self.image = self.create_gradient()
 
+    def create_gradient(self):
+        img = Image.new("RGB", (self.width, self.height))
+        draw = ImageDraw.Draw(img)
+
+        for x in range(self.width):
+            r = int((self.start_color[0] * (self.width - x) + self.end_color[0] * x) / self.width)
+            g = int((self.start_color[1] * (self.width - x) + self.end_color[1] * x) / self.width)
+            b = int((self.start_color[2] * (self.width - x) + self.end_color[2] * x) / self.width)
+            color = (r, g, b)
+            draw.line((x, 0, x, self.height), fill=color)
+
+        return ImageTk.PhotoImage(img)
+
+class GradientLabel(tk.Label):
+    def __init__(self, master=None, text="", gradient=None, **kwargs):
+        super().__init__(master, text=text, **kwargs)
+        self.gradient = gradient
+        self.configure(image=self.gradient.image, compound="center") 
+
+class GradientButton(tk.Button):
+    def __init__(self, master=None, text="", gradient=None, **kwargs):
+        super().__init__(master, text=text, **kwargs)
+        self.gradient = gradient
+        self.configure(image=self.gradient.image, compound="center")
 
 class OrderOfColors:
     def __init__(self, master):
@@ -81,38 +113,55 @@ class OrderOfColors:
             self.entry.delete(0, END)
             self.entry.insert(0, selected_text)
             self.updated = True
+
+
 class JobEntryWindow:
     def __init__(self, parent):
         self.job_entry_window = tk.Toplevel(parent)
         self.job_entry_window.title("Создание нового заказа")
-        # Add widgets for entering job details in job_entry_window...
-        label_date = tk.Label(self.job_entry_window, text="Дата:")  
-        label_date.grid(row=0, column=0, padx=10, pady=10)
-        self.entry_date = tk.Entry(self.job_entry_window)
-        self.entry_date.grid(row=0, column=1, padx=10, pady=10)
-        label_printer_name = tk.Label(self.job_entry_window, text="Машина:")
-        label_printer_name.grid(row=1, column=0, padx=10, pady=10)
-        self.entry_printer_name = tk.Entry(self.job_entry_window)
-        self.entry_printer_name.grid(row=1, column=1, padx=10, pady=10)
-        save_button = tk.Button(self.job_entry_window, text="Сохранить", command=self.save_job)
-        save_button.grid(row=2, columnspan=2, pady=20)
+
+        
+        self.f_job = tk.Frame(self.job_entry_window, relief=tk.SOLID)
+        self.f_job.pack(expand=True, fill="both")
+
+        gradient = Gradient(start_color=(120, 175, 235), end_color=(248, 247, 250))
+        gradient_label_name_job = GradientLabel(self.f_job, width=150, height=20, text="Название заказа:", gradient=gradient)
+        gradient_label_name_job.grid(row=0, column=0, padx=5, pady=5)
+        self.entry_name_job = tk.Entry(self.f_job, width=30)
+        self.entry_name_job.grid(row=0, column=1, columnspan=2, padx=5, pady=5)
+        
+        label_number_job = tk.Label(self.f_job, text="Заказ №:")
+        label_number_job.grid(row=0, column=3, padx=5, pady=5)
+        self.entry_number_job = tk.Entry(self.f_job, width=8)
+        self.entry_number_job.grid(row=0, column=4, padx=5, pady=5, sticky=tk.W)
+        
+        label_material_job = tk.Label(self.f_job, text="Материал(название):")
+        label_material_job.grid(row=1, column=0, padx=5, pady=5)
+        self.entry_material_job = tk.Entry(self.f_job, width=25)
+        self.entry_material_job.grid(row=1, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        gradient_save_button = GradientButton(self.f_job, width=150, height=20, text="Сохранить", gradient=gradient, command=self.save_job)
+        gradient_save_button.grid(row=2, columnspan=2, pady=20)
+
     def save_job(self):
         # Add code to save job details to the database...
-        date = self.entry_date.get()
-        printer_name = self.entry_printer_name.get()
-        print("Saving job details to the database:", date, printer_name)
+        name = self.entry_name_job.get()
+        number = self.entry_number_job.get()
+        material = self.entry_material_job.get()
+        print("Saving job details to the database:", name, number, material)
         # You can call the necessary method from your main application class to save the job details.
+
 class FlashingText:
     def __init__(self, master):
         self.master = master
-        self.text_label = tk.Label(master, text="Формат бумаги/картона(мм.):", font=("Arial", 13, "bold"))
+        self.text_label = tk.Label(master, text="Формат бумаги/картона(мм.):", font=("Arial", 12, "bold"))
         self.text_label.place(x=470, y=40)
         Thread(target=self.flashing, daemon=True).start()
     def flashing(self):
         while True:
-            self.text_label.config(fg='red', text="1-e значение-это Direction/Grain", font=("Arial", 13, "bold"))
+            self.text_label.config(fg='red', text="1-e значение-это Direction/Grain", font=("Arial", 12, "bold"))
             time.sleep(0.9)
-            self.text_label.config(fg='black', text="Формат бумаги/картона(мм.):", font=("Arial", 13, "bold"))
+            self.text_label.config(fg='black', text="Формат бумаги/картона(мм.):", font=("Arial", 12, "bold"))
             time.sleep(0.9)
 class MenuBar:
     def __init__(self, root, app):
@@ -230,12 +279,12 @@ class ArcoladApp:
     def create_widgets(self):
 
         # Создание рамки для всего приложения
-        self.app_frame = tk.Frame(self.root, bd=5, relief=tk.SOLID)
+        self.app_frame = tk.Frame(self.root, bd=3, relief=tk.GROOVE)
         self.app_frame.pack(expand=True, fill="both")
         self.flashing_text = FlashingText(self.app_frame)
         # Создание виджетов основного окна приложения
-        label_date = tk.Label(self.app_frame, text="Дата:", font=("Arial", 13, "bold"))
-        label_date.place(x=10, y=10)
+        label_date = tk.Label(self.app_frame, text="Дата:", font=("Arial", 12, "bold"))
+        label_date.place(x=10, y=9)
         self.entry_date = tk.Entry(self.app_frame, width=10, font=("Arial", 12, "normal"))
         self.entry_date.place(x=60, y=10)
         self.setup_validation(self.entry_date, 10)
@@ -262,15 +311,15 @@ class ArcoladApp:
         
         #Формат и направление волокна на бумаге
         #Первая цифра указывает на Grain вдоль которой идет направление
-        self.paper_format_before_x = tk.Entry(self.app_frame, width=4, font=("Arial", 13, "normal"))
+        self.paper_format_before_x = tk.Entry(self.app_frame, width=4, font=("Arial", 12, "normal"))
         self.paper_format_before_x.place(x=756, y=40)
         self.setup_validation(self.paper_format_before_x, 4)
-        label_paper_format_x = tk.Label(self.app_frame, text="X", font=("Arial", 13, "bold"))
+        label_paper_format_x = tk.Label(self.app_frame, text="X", font=("Arial", 12, "bold"))
         label_paper_format_x.place(x=797, y=40)
-        self.paper_format_after_x = tk.Entry(self.app_frame, width=4, font=("Arial", 13, "normal"))
+        self.paper_format_after_x = tk.Entry(self.app_frame, width=4, font=("Arial", 12, "normal"))
         self.paper_format_after_x.place(x=815, y=40)
         self.setup_validation(self.paper_format_after_x, 4)
-        label_count_cheets = tk.Label(self.app_frame, text="Тираж(шт.):", font=("Arial", 13, "bold"))
+        label_count_cheets = tk.Label(self.app_frame, text="Тираж(шт.):", font=("Arial", 12, "bold"))
         label_count_cheets.place(x=1055, y=10)
         self.count_sheets = tk.Entry(self.app_frame, width=12, font=("Arial", 12, "normal"))
         self.count_sheets.place(x=1150, y=10)
@@ -281,18 +330,22 @@ class ArcoladApp:
         self.thickness = tk.Entry(self.app_frame, width=7, font=("Arial", 16, "bold"))
         self.thickness.place(x=1180, y=40)
         self.setup_validation(self.thickness, 7)
-        label_density = tk.Label(self.app_frame, text="г/м²", font=("Arial", 13, "bold"))
+        label_density = tk.Label(self.app_frame, text="г/м²", font=("Arial", 12, "bold"))
         label_density.place(x=1160, y=80)
         self.density = tk.Entry(self.app_frame, width=4, font=("Arial", 12, "normal"))
         self.density.place(x=1210, y=80)
         self.setup_validation(self.density, 4)
-        label_count_plates = tk.Label(self.app_frame, text="Кол-во форм:", font=("Arial", 13, "bold"))
+        label_count_plates = tk.Label(self.app_frame, text="Кол-во форм:", font=("Arial", 12, "bold"))
         label_count_plates.place(x=10, y=70)
         self.count_plates = tk.Entry(self.app_frame, width=2, font=("Arial", 12, "normal"))
         self.count_plates.place(x=140, y=70)
         self.setup_validation(self.count_plates, 2)
-        label_plates_format = tk.Label(self.app_frame, text="Размер печатной формы(мм):", font=("Arial", 13, "bold"))
-        label_plates_format.place(x=170, y=70)
+
+        gradient = Gradient(start_color=(120, 175, 235), end_color=(248, 247, 250))
+        label_plates_format = GradientLabel(self.app_frame, width=250, height=30,  text="Размер печатной формы(мм):", 
+            font=("Arial", 12, "bold"), gradient=gradient)
+        label_plates_format.place(x=170, y=65)
+
         self.plates_format_before_x = tk.Entry(self.app_frame, width=4, font=("Arial", 13, "normal"))
         self.plates_format_before_x.place(x=430, y=70)
         self.setup_validation(self.plates_format_before_x, 4)
@@ -301,7 +354,9 @@ class ArcoladApp:
         self.plates_format_after_x = tk.Entry(self.app_frame, width=4, font=("Arial", 13, "normal"))
         self.plates_format_after_x.place(x=490, y=70)
         self.setup_validation(self.plates_format_after_x, 4)
-        button_orders_of_colors = tk.Button(self.app_frame, text="Порядок наложения цветов", font=("Arial", 13, "bold"), command=self.open_popup)
+
+        gradient = Gradient(start_color=(120, 175, 235), end_color=(248, 247, 250))
+        button_orders_of_colors = GradientButton(self.app_frame, text="Порядок наложения цветов", font=("Arial", 12, "bold"), gradient=gradient, command=self.open_popup)
         button_orders_of_colors.place(x=535, y=70)
         self.select_button = tk.Button(self.app_frame, image=self.root.img_pdf, command=self.open_pdf)
         self.select_button.place(x=790, y=70) 
@@ -311,7 +366,13 @@ class ArcoladApp:
         self.canvas_show_pdf = Canvas(self.app_frame, width=1255, height=500, bg='green')
         self.canvas_show_pdf.place(x=10, y=120)
        
+    # Создаем экземпляр Gradient
+        #gradient = Gradient(width=200, height=30, start_color=(255, 0, 0), end_color=(0, 0, 255))
         
+        # Создаем экземпляр GradientLabel с использованием Gradient
+        #self.gradient_label = GradientLabel(self.root, text="Пример градиентного фона", gradient=gradient)
+        #self.gradient_label.place(x=20, y=40)
+
     def open_popup(self):
         # Создайте экземпляр всплывающего окна
         popup_window = OrderOfColors(self.root)
@@ -343,11 +404,28 @@ class ArcoladApp:
             # Display the image on the canvas
             canvas_image_item = self.canvas_show_pdf.create_image(0, 0, anchor=tk.NW, image=tk_image)
             self.canvas_show_pdf.image = tk_image  # Keep a reference to prevent garbage collection
+            self.image_item = canvas_image_item  # Set the image_item attribute
+
+            # Bind mouse events to the canvas for moving the image
+            self.canvas_show_pdf.bind("<ButtonPress-1>", self.on_canvas_click)
+            self.canvas_show_pdf.bind("<B1-Motion>", self.on_canvas_drag)
+
 
    
 
       
+    def on_canvas_click(self, event):
+        self.start_x = event.x
+        self.start_y = event.y
 
+    def on_canvas_drag(self, event):
+        delta_x = event.x - self.start_x
+        delta_y = event.y - self.start_y
+
+        self.canvas_show_pdf.move(self.image_item, delta_x, delta_y)
+
+        self.start_x = event.x
+        self.start_y = event.y
     
     def setup_validation(self, widget, max_length, validate_func=None):
         if validate_func is None:
@@ -385,7 +463,7 @@ class ArcoladApp:
         self.entry_date.focus_set()  # Set focus on the date entry
         print(formatted_date)
     def run(self):
-        self.root.title("Arcolad")
+        self.root.title("Arcolad-Главный экран")
         self.root.iconbitmap('arcolad_ico.ico')
         # Make the window initially fullscreen
         self.root.attributes('-fullscreen', False)
@@ -399,7 +477,3 @@ class ArcoladApp:
 if __name__ == '__main__':
     arcolad = ArcoladApp()
     arcolad.run()
-
-
-
-
