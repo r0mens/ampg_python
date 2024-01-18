@@ -2,6 +2,7 @@
 import tkinter as tk
 from tkinter import filedialog
 from order_of_colors import OrderOfColors
+from tkinter import *
 
 class MenuBar:
     def __init__(self, root, app):
@@ -42,5 +43,8 @@ class MenuBar:
     
     def open_pdf(self):
         pdf_file_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
+        self.app.filepath_field.delete(1.0, END)
+        self.app.filepath_field.insert(1.0, pdf_file_path)
         if pdf_file_path:
             self.app.show_pdf_on_canvas(pdf_file_path)
+
